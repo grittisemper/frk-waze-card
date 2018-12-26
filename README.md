@@ -35,6 +35,7 @@ You should have setup Waze integration and zones in HomeAssistant.
 | header | boolean | **Optional** | `true` show header
 | title | string | **Optional** | `Waze Routes` Header text shown at top of card
 | entities | object | **Required** | List of routes to display
+| metric | boolean | **Optional** | `false` use metric system for distance
 | columns | list | **Optional** | `name, distance, duration, route` Which columns to display
 
 <h3>`entities` Options:</h3>
