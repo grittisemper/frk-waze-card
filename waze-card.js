@@ -1,107 +1,43 @@
 /**
- * 
+ * creates a lovelace card to show waze routes details
  */
 class WazeCard extends HTMLElement {
 
     /**
      * called by hass - creates card, sets up any conmfig settings, and generates card
-     * @param  {[type]} hass [description]
-     * @return {[type]}      [description]
+     * @param {Object} hass
      */
     set hass(hass) {
-      // if we don't have the card yet then create it
-      if (!this.content) {
+      this._hass = hass;
 
-        if(!Array.isArray(this.config.values)){
-          throw new Error('values config needs to be a list');
-        }
-
-        const card = document.createElement('ha-card');
-        if(this.config.title) card.header = `${this.config.title}`;
-        this.content = document.createElement('div');
-
-        // if not a part of a card group then add card padding
-        if(!this.config.group){
-          this.content.classList.add('waze-card-wrapper');
-        }
-
-        // add click event to open waze routes
-        this.content.addEventListener('click', event => {
-          const source = event.target || event.srcElement;
-          if(!source || !source.dataset || !source.dataset.location) return;
-
-          const location = JSON.parse(source.dataset.location);
-          window.open(`https://www.waze.com/ul?navigate=yes&ll=${location.lat}%2C${location.long}`);
-        });
-
-        card.appendChild(this.content);
-        this.appendChild(card);
-  
-        this._hass = hass;
-    
-        // save css rules
-        this.cssRules = `
-          <style>
-            .waze-card-wrapper {
-            }
-
-            .waze-card-route-table {
-              padding: 0 16px 10px;
-                  font-size: 1.1em;
-            }
-
-            .waze-card-route-head {
-              padding: 0 16px 10px;
-            }
-
-            .waze-card-route-head-item {
-              padding: 0 15px 0 0;
-              text-transform: capitalize;
-            }   
-
-            .waze-card-route-body {
-            }
-
-            .waze-card-route-row {
-            }
-
-            .waze-card-route-item {
-              text-transform: capitalize;
-            }
-          </style>
-        `;
-      }
-
-      // update card
       const wazeStates = this.getAllStates(this.config.entities);
       this.updateHtmlIfNecessary(wazeStates);
     }
 
     /**
-     *
+     * formats all states for this card to use for the HTML
+     * @param {Array<Object>} entities  
      */
     getAllStates(entities){
       return entities
         .map(entity => {
-          const state = this._hass.states[entity.entity];
-          if(state) state.name = entity.name;
-          
-          const zone = this._hass.states[entity.zone];
-          if(zone) state.location = {lat: zone.attributes.latitude, long:zone.attributes.longitude};
+          const state = this._hass.states[entity.entity || ''];
+          const zone = this._hass.states[entity.zone || ''];
 
-          return state;
+          if(state && zone) {
+            state.name = entity.name || zone.attributes.friendly_name;
+            state.location = {lat: zone.attributes.latitude, long:zone.attributes.longitude};
+            return state;
+          }
         })
         .filter(Boolean);
     }
 
     /**
-     * [updateHtmlIfNecessary description]
-     * @param  {[type]} wazeStates [description]
-     * @return {[type]}            [description]
+     * Updates the HTML if anything has changed
      */
     updateHtmlIfNecessary(wazeStates){
       const nextStates = wazeStates.map(state => {
-
         return {
           location: state.location,
           name: state.name || state.entity || '',
@@ -121,9 +57,9 @@ class WazeCard extends HTMLElement {
     }
 
     /**
-     * [computeDuration description]
-     * @param  {[type]} state [description]
-     * @return {[type]}       [description]
+     * generates the duration for a route
+     * @param  {Object} state the card state
+     * @return {string} the formatted duration for a ruote
      */
     computeDuration(state){
       let duration = state.attributes && state.attributes.duration || 0;
@@ -132,9 +68,9 @@ class WazeCard extends HTMLElement {
     }
 
     /**
-     * 
-     * @param  {[type]} distance [description]
-     * @return {[type]}          [description]
+     * computes the distance for a route for metric/imperial system
+     * @param  {Object} state the card state
+     * @return {string} the formatted distance 
      */
     computeDistance(state){
       let distance = state.attributes && state.attributes.distance || 0;
@@ -146,7 +82,7 @@ class WazeCard extends HTMLElement {
     } 
 
     /**
-     * [createCard description]
+     * generates the entire card and adds it to the dom
      */
     createCard(){
       this.content.innerHTML = this.cssRules;
@@ -163,7 +99,8 @@ class WazeCard extends HTMLElement {
     }
 
     /**
-     * [createCardHeader description]
+     * creates the table header
+     * @return {HTMLElement} the table header element
      */
     createCardHeader(){
       if(!this.config.header) return;
@@ -171,7 +108,7 @@ class WazeCard extends HTMLElement {
       const stateHeader = document.createElement('thead');
       stateHeader.classList.add('waze-card-route-head');
 
-      this.config.values.forEach(column => {
+      this.config.columns.forEach(column => {
           const stateRouteHeaderItem = document.createElement('th');
           stateRouteHeaderItem.classList.add('waze-card-route-head-item');
           stateRouteHeaderItem.setAttribute("align", "left");
@@ -183,7 +120,8 @@ class WazeCard extends HTMLElement {
     }
 
     /**
-     * [createCardBody description]
+     * creates the table body and a row for each route
+     * @return {HTMLElement} the table body element
      */
     createCardBody(){
       const stateBody = document.createElement('tbody');
@@ -197,7 +135,7 @@ class WazeCard extends HTMLElement {
         stateRouteRow.dataset.location = location;
 
         // for each value create a HTML column
-        this.config.values.forEach(column => {
+        this.config.columns.forEach(column => {
           const stateRouteItem = document.createElement('td');
           stateRouteItem.classList.add('waze-card-route-item');
           
@@ -213,30 +151,90 @@ class WazeCard extends HTMLElement {
     }
 
     /**
-     * merge the user configuration with default configuration
+     * merge the user configuration with default configuration and initialize card
      * @param {[type]} config [description]
      */
     setConfig(config) {
       if (!config.entities) {
-        throw new Error('');
+        throw new Error('Entities list required.');
       }
-  
+
+      if(config.columns && !Array.isArray(config.columns)){
+        throw new Error('columns config needs to be a list');
+      }
+
+      // setup conig
       this.config = {
         title: 'Waze Routes',
         group: false,
         header: true,
         metric: false,
-        values: ['name', 'distance', 'duration', 'route'],
+        columns: ['name', 'distance', 'duration', 'route'],
         ...config
       };
+
+      // create card
+      const card = document.createElement('ha-card');
+      if(this.config.title) card.header = `${this.config.title}`;
+      this.content = document.createElement('div');
+
+      // if not a part of a card group then add card padding
+      if(!this.config.group){
+        this.content.classList.add('waze-card-wrapper');
+      }
+
+      // add click event to open waze routes
+      this.content.addEventListener('click', event => {
+        const source = event.target || event.srcElement;
+        if(!source || !source.dataset || !source.dataset.location) return;
+
+        const location = JSON.parse(source.dataset.location);
+        window.open(`https://www.waze.com/ul?navigate=yes&ll=${location.lat}%2C${location.long}`);
+      });
+
+      card.appendChild(this.content);
+      this.appendChild(card);
+
+      // save css rules
+      this.cssRules = `
+        <style>
+          .waze-card-wrapper {
+          }
+
+          .waze-card-route-table {
+            padding: 0 16px 10px;
+                font-size: 1.1em;
+          }
+
+          .waze-card-route-head {
+            padding: 0 16px 10px;
+          }
+
+          .waze-card-route-head-item {
+            padding: 0 15px 0 0;
+            text-transform: capitalize;
+          }   
+
+          .waze-card-route-body {
+            cursor: pointer;
+          }
+
+          .waze-card-route-row {
+          }
+
+          .waze-card-route-item {
+            text-transform: capitalize;
+          }
+        </style>
+      `;
     }
   
     /**
      * get the size of the card
-     * @return {[type]} [description]
+     * @return 1
      */
     getCardSize() {
-      return 3;
+      return 1;
     }
 }
   
