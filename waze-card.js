@@ -10,6 +10,7 @@ class WazeCard extends HTMLElement {
     set hass(hass) {
       this._hass = hass;
 
+
       const wazeStates = this.getAllStates(this.config.entities);
       this.updateHtmlIfNecessary(wazeStates);
     }
@@ -74,10 +75,10 @@ class WazeCard extends HTMLElement {
      */
     computeDistance(state){
       let distance = state.attributes && state.attributes.distance || 0;
-      if(!this.config.metric) distance = distance/1.60934;
+      if(this._hass.config.unit_system.length == 'km') distance = distance * 1.60934;
 
       distance = parseFloat(Math.round(distance * 100) / 100).toFixed(2);
-      distance = this.config.metric ? `${distance}km` : `${distance}mi`;
+      distance = `${distance}${this._hass.config.unit_system.length}`;
       return distance;
     } 
 
@@ -155,6 +156,9 @@ class WazeCard extends HTMLElement {
      * @param {[type]} config [description]
      */
     setConfig(config) {
+      console.log(config, this._hass)
+
+
       if (!config.entities) {
         throw new Error('Entities list required.');
       }
@@ -163,12 +167,12 @@ class WazeCard extends HTMLElement {
         throw new Error('columns config needs to be a list');
       }
 
+
       // setup conig
       this.config = {
         title: 'Waze Routes',
         group: false,
         header: true,
-        metric: false,
         columns: ['name', 'distance', 'duration', 'route'],
         ...config
       };
