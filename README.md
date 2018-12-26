@@ -1,7 +1,7 @@
 <h1 align="center">Waze Card for Home Assistant</h1>
 
 <p align="center">
-  <img src='https://i.imgur.com/gy3gSDm.png' />
+  <img src='https://i.imgur.com/PrqeVYJ.png' />
 </p>
 
 <h2>Features</h2>
