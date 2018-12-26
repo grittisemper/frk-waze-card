@@ -37,20 +37,14 @@ You should have setup Waze integration and zones in HomeAssistant.
 | entities | object | **Required** | List of routes to display
 | columns | list | **Optional** | `name, distance, duration, route` Which columns to display
 
+<h3>`entities` Options:</h3>
+
 | Name | Type | Requirement | `Default` Description
+| ---- | ---- | ------- | -----------
 | entity | string | **Required** | The waze sensor entitiy to use 
 | zone | string | **Required** | The zone to map the route with
 | name | string | **Optional** | `friendly_name from Waze config` The name of the route
 
-cards:
-  - type: custom:waze-card
-    entities:
-      - entity: sensor.waze_home
-        zone: zone.home
-        name: Home
-      - entity: sensor.waze_work
-        zone: zone.work
-        name: Work
 
 <h2>Configuration</h2>
 Go to your config directory and create a www folder. Inside the www run
@@ -71,13 +65,13 @@ Add the custom card to views:
 
 ```
 views:
-	cards:
-	  - type: custom:waze-card
-	    entities:
-	      - entity: sensor.waze_home
-	        zone: zone.home
-	        name: Home
-	      - entity: sensor.waze_work
-	        zone: zone.work
-	        name: Work
+  cards:
+    - type: custom:waze-card
+      entities:
+        - entity: sensor.waze_home
+          zone: zone.home
+          name: Home
+        - entity: sensor.waze_work
+          zone: zone.work
+          name: Work
 ```
