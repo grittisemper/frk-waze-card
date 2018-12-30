@@ -155,8 +155,6 @@ class WazeCard extends HTMLElement {
      * @param {[type]} config [description]
      */
     setConfig(config) {
-      console.log(config, this._hass)
-
 
       if (!config.entities) {
         throw new Error('Entities list required.');
@@ -165,7 +163,6 @@ class WazeCard extends HTMLElement {
       if(config.columns && !Array.isArray(config.columns)){
         throw new Error('columns config needs to be a list');
       }
-
 
       // setup conig
       this.config = {
