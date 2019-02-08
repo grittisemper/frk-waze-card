@@ -1,245 +1,162 @@
-/**
- * creates a lovelace card to show waze routes details
- */
-class WazeCard extends HTMLElement {
-
-    /**
-     * called by hass - creates card, sets up any conmfig settings, and generates card
-     * @param {Object} hass
-     */
-    set hass(hass) {
-      this._hass = hass;
-
-      const wazeStates = this.getAllStates(this.config.entities);
-      this.updateHtmlIfNecessary(wazeStates);
+"use strict";
+//import {Polymer} from "@polymer/polymer/polymer-legacy";
+let LitElement = window.LitElement || Object.getPrototypeOf(customElements.get("hui-error-entity-row"));
+let html = LitElement.prototype.html;
+function loadCSS(url) {
+    const link = document.createElement('link');
+    link.type = 'text/css';
+    link.rel = 'stylesheet';
+    link.href = url;
+    document.head.appendChild(link);
+}
+//loadCSS( "/local/card-waze/waze-card.css" ) ;
+// Create your custom component
+class WazeCard extends LitElement {
+    styles() {
+        return html `
+    <style>
+      .ha-card-waze { /* Zebra striping */ }
+      .ha-card-waze h3 { padding-left: 10px ; padding-right: 10px ; margin-bottom: 0 ; color: white ; }
+      .ha-card-waze table { width: 100%; }
+      .ha-card-waze tr:nth-of-type(odd) { /*background: #eee; */ }
+      .ha-card-waze th { /*background: #3498db;*/ color: white; font-weight: bold; }
+      .ha-card-waze td { padding-left: 10px ; padding-right: 10px ; color: white ; text-align: left; }
+      .ha-card-waze th { padding-left: 10px ; padding-right: 10px ; color: white ; text-align: left; }
+    </style>
+    `;
     }
-
-    /**
-     * formats all states for this card to use for the HTML
-     * @param {Array<Object>} entities  
-     */
-    getAllStates(entities){
-      return entities
-        .map(entity => {
-          const state = this._hass.states[entity.entity || ''];
-          const zone = this._hass.states[entity.zone || ''];
-
-          if(state && zone) {
-            state.name = entity.name || zone.attributes.friendly_name;
-            state.location = {lat: zone.attributes.latitude, long:zone.attributes.longitude};
-            return state;
-          }
+    render() {
+        return html `
+    <ha-card class="ha-card-waze">
+        ${this.styles()}
+        <h3>${this.config.title}</h3>
+        <table class="ha-card-waze">
+            <thead>
+                ${this.config.columns.map(column => html `<th>${(column || '').toLowerCase()}</th>`)}
+            </thead>
+            <tbody>
+                ${this.currentStates.map(state => html `
+                  <tr onclick="window.open('https://www.waze.com/ul?navigate=yes&ll=${state.destination.lat}%2C${state.destination.long}&from=${state.origin.lat}%2C${state.origin.long}&at=now');">
+                    ${this.config.columns.map(column => html `
+                      <td>${state[column]}</td>
+                    `)}
+                  </tr>
+                `)}
+            </tbody>     
+        </table>
+    </ha-card>
+    `;
+    }
+    getAllStates(entities) {
+        const wazeStates = entities
+            .map(entity => {
+            const state = this._hass.states[entity.entity || ''];
+            const origin = this._hass.states[entity.origin] || { attributes: { latitude: this._hass.config.latitude, longitude: this._hass.config.longitude } };
+            const destination = this._hass.states[entity.destination || ''];
+            if (state && destination) {
+                state.to_unit_system = entity.to_unit_system || this._hass.config.unit_system.length;
+                state.name = entity.name || destination.attributes.friendly_name;
+                state.origin = { lat: origin.attributes.latitude, long: origin.attributes.longitude };
+                state.destination = { lat: destination.attributes.latitude, long: destination.attributes.longitude };
+                return state;
+            }
         })
-        .filter(Boolean);
+            .filter(Boolean);
+        const nextStates = wazeStates.map(state => {
+            return {
+                origin: state.origin,
+                destination: state.destination,
+                name: state.name || state.entity || '',
+                distance: this.computeDistance(state),
+                duration: this.computeDuration(state),
+                route: state.attributes && state.attributes.route || ''
+            };
+        });
+        return (nextStates);
     }
-
-    /**
-     * Updates the HTML if anything has changed
-     */
-    updateHtmlIfNecessary(wazeStates){
-      const nextStates = wazeStates.map(state => {
-        return {
-          location: state.location,
-          name: state.name || state.entity || '',
-          distance: this.computeDistance(state),
-          duration: this.computeDuration(state),
-          route: state.attributes && state.attributes.route || ''
-        };
-      });
-
-      // if data is the same as last time then do nothing
-      if(JSON.stringify(nextStates) === JSON.stringify(this.currentStates || [])){
-        return;
-      }
-
-      this.currentStates = nextStates;
-      this.createCard();
-    }
-
     /**
      * generates the duration for a route
      * @param  {Object} state the card state
      * @return {string} the formatted duration for a ruote
      */
-    computeDuration(state){
-      let duration = state.attributes && state.attributes.duration || 0;
-      let unit_of_measurement = state.attributes && state.attributes.unit_of_measurement || '';
-      return `${parseInt(duration)} ${unit_of_measurement}`;
+    computeDuration(state) {
+        let duration = state.attributes && state.attributes.duration || 0;
+        let unit_of_measurement = state.attributes && state.attributes.unit_of_measurement || '';
+        return `${parseInt(duration)} ${unit_of_measurement}`;
     }
-
     /**
      * computes the distance for a route for metric/imperial system
      * @param  {Object} state the card state
-     * @return {string} the formatted distance 
+     * @return {string} the formatted distance
      */
-    computeDistance(state){
-      let distance = state.attributes && state.attributes.distance || 0;
-      if(this._hass.config.unit_system.length !== 'mi') distance = distance * 1.60934;
-
-      distance = parseFloat(Math.round(distance * 100) / 100).toFixed(2);
-      distance = `${distance}${this._hass.config.unit_system.length}`;
-      return distance;
-    } 
-
-    /**
-     * generates the entire card and adds it to the dom
-     */
-    createCard(){
-      this.content.innerHTML = this.cssRules;
-      const stateTable = document.createElement('table');
-      stateTable.classList.add('waze-card-route-table');
-
-      const cardHeader = this.createCardHeader();
-      if(cardHeader) stateTable.append(cardHeader);
-
-      const cardBody = this.createCardBody();
-      if(cardBody) stateTable.append(cardBody);
-      
-      this.content.append(stateTable);
+    computeDistance(state) {
+        let distance = state.attributes && state.attributes.distance || 0;
+        if (this._hass.config.unit_system.length !== state.to_unit_system) {
+            if ('km' == state.to_unit_system) {
+                distance = distance / 1.60934;
+            }
+            else {
+                distance = distance * 1.60934;
+            }
+        }
+        distance = Number(Math.round(distance * 100) / 100).toFixed(1);
+        distance = `${distance} ${this._hass.config.unit_system.length}`;
+        return distance;
     }
-
     /**
-     * creates the table header
-     * @return {HTMLElement} the table header element
+     * System
+     * @returns {{hass: ObjectConstructor; config: ObjectConstructor}}
      */
-    createCardHeader(){
-      if(!this.config.header) return;
-
-      const stateHeader = document.createElement('thead');
-      stateHeader.classList.add('waze-card-route-head');
-
-      this.config.columns.forEach(column => {
-          const stateRouteHeaderItem = document.createElement('th');
-          stateRouteHeaderItem.classList.add('waze-card-route-head-item');
-          stateRouteHeaderItem.setAttribute("align", "left");
-          stateRouteHeaderItem.innerHTML = (column || '').toLowerCase();
-          stateHeader.append(stateRouteHeaderItem);
-      });
-
-      return stateHeader;
+    static get properties() {
+        return {
+            hass: Object,
+            config: Object,
+        };
     }
-
     /**
-     * creates the table body and a row for each route
-     * @return {HTMLElement} the table body element
-     */
-    createCardBody(){
-      const stateBody = document.createElement('tbody');
-      stateBody.classList.add('waze-card-route-body');
-      
-      this.currentStates.map(state => {
-        const location = state.location && JSON.stringify(state.location);
-
-        const stateRouteRow = document.createElement('tr');
-        stateRouteRow.classList.add('waze-card-route-row');
-        stateRouteRow.dataset.location = location;
-
-        // for each value create a HTML column
-        this.config.columns.forEach(column => {
-          const stateRouteItem = document.createElement('td');
-          stateRouteItem.classList.add('waze-card-route-item');
-          
-          stateRouteItem.innerHTML = (state[column] || '').toLowerCase();
-          stateRouteItem.dataset.location = location;
-          stateRouteRow.append(stateRouteItem);
-        });
-
-        stateBody.append(stateRouteRow);
-      });
-
-      return stateBody;
-    }
-
-    /**
-     * merge the user configuration with default configuration and initialize card
-     * @param {[type]} config [description]
+     * System
+     * @param config
      */
     setConfig(config) {
-
-      if (!config.entities) {
-        throw new Error('Entities list required.');
-      }
-
-      if(config.columns && !Array.isArray(config.columns)){
-        throw new Error('columns config needs to be a list');
-      }
-
-      // setup conig
-      this.config = {
-        title: 'Waze Routes',
-        group: false,
-        header: true,
-        columns: ['name', 'distance', 'duration', 'route'],
-        ...config
-      };
-
-      // create card
-      const card = document.createElement('ha-card');
-      if(this.config.title) card.header = `${this.config.title}`;
-      this.content = document.createElement('div');
-
-      // if not a part of a card group then add card padding
-      if(!this.config.group){
-        this.content.classList.add('waze-card-wrapper');
-      }
-
-      // add click event to open waze routes
-      this.content.addEventListener('click', event => {
-        const source = event.target || event.srcElement;
-        if(!source || !source.dataset || !source.dataset.location) return;
-
-        const location = JSON.parse(source.dataset.location);
-        window.open(`https://www.waze.com/ul?navigate=yes&ll=${location.lat}%2C${location.long}`);
-      });
-
-      card.appendChild(this.content);
-      this.appendChild(card);
-
-      // save css rules
-      this.cssRules = `
-        <style>
-          .waze-card-wrapper {
-          }
-
-          .waze-card-route-table {
-            padding: 0 16px 10px;
-                font-size: 1.1em;
-          }
-
-          .waze-card-route-head {
-            padding: 0 16px 10px;
-          }
-
-          .waze-card-route-head-item {
-            padding: 0 15px 0 0;
-            text-transform: capitalize;
-          }   
-
-          .waze-card-route-body {
-            cursor: pointer;
-          }
-
-          .waze-card-route-row {
-          }
-
-          .waze-card-route-item {
-            text-transform: capitalize;
-          }
-        </style>
-      `;
+        if (!config.entities) {
+            throw new Error('You need to define entities');
+        }
+        // setup config
+        this.config = Object.assign({ title: 'Waze Routes', group: false, header: true, columns: ['name', 'distance', 'duration', 'route'] }, config);
+        // add click event to open waze routes
+        // this.getElementsByClassName( 'ha-card-waze' ).addEventListener('click', event => {
+        //   const source = event.target || event.srcElement;
+        //   if(!source || !source.dataset || !source.dataset.location) return;
+        //
+        //   const location = JSON.parse(source.dataset.location);
+        //   window.open(`https://www.waze.com/ul?navigate=yes&ll=${location.lat}%2C${location.long}`);
+        // });
+        //this.config = config;
     }
-  
     /**
-     * get the size of the card
-     * @return 1
+     * Assign the external hass object to an internal class var.
+     * This is called everytime a state change occurs in HA
+     *
+     * @param hass
+     */
+    set hass(hass) {
+        this._hass = hass;
+        const wazeStates = this.getAllStates(this.config.entities);
+        // if data is the same as last time then do nothing
+        if (JSON.stringify(wazeStates) === JSON.stringify(this.currentStates || [])) {
+            return;
+        }
+        this.currentStates = wazeStates;
+    }
+    /**
+     * System
+     * The height of your card. Home Assistant uses this to automatically
+     * distribute all cards over the available columns.
+     * @returns {any}
      */
     getCardSize() {
-      return 1;
+        return this.config.entities.length + 1;
     }
 }
-  
-  
-  /**
-   * add card definition to hass
-   */
-  customElements.define('waze-card', WazeCard);
+customElements.define('waze-card', WazeCard);
+//# sourceMappingURL=waze-card.js.map
