@@ -35,11 +35,11 @@ class WazeCard extends LitElement {
     return html`
     <ha-card class="ha-card-waze">
         ${this.styles()}
-        <h3>${this.config.title}</h3>
+        ${this.config.title.length > 0 ? html`<h2>${this.config.title}</h2>` : html`` }
         <table class="ha-card-waze">
-            <thead>
-                ${this.config.columns.map(column => html`<th>${(column || '').toLowerCase()}</th>`)}
-            </thead>
+            ${this.config.header ? html`
+              <thead>${this.config.columns.map(column => html`<th>${(column || '').toLowerCase()}</th>`)}</thead>            
+            ` : html`` }
             <tbody>
                 ${this.currentStates.map( state => html`
                   <tr onclick="window.open('https://www.waze.com/ul?navigate=yes&ll=${state.destination.lat}%2C${state.destination.long}&from=${state.origin.lat}%2C${state.origin.long}&at=now');">
@@ -141,7 +141,7 @@ class WazeCard extends LitElement {
       title: 'Waze Routes',
       group: false,
       header: true,
-      columns: ['name', 'distance', 'duration', 'route'],
+      columns: ['name', 'distance', 'duration'],
       ...config
     };
 
