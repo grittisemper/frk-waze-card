@@ -122,7 +122,7 @@ class WazeCard extends LitElement {
             throw new Error('You need to define entities');
         }
         // setup config
-        this.config = Object.assign({ title: 'Waze Routes', group: false, header: true, columns: ['name', 'distance', 'duration'] }, config);
+        this.config = Object.assign({ title: 'Waze Routes', group: false, header: true, columns: ['name', 'distance', 'duration', 'route'] }, config);
         // add click event to open waze routes
         // this.getElementsByClassName( 'ha-card-waze' ).addEventListener('click', event => {
         //   const source = event.target || event.srcElement;

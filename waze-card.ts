@@ -141,7 +141,7 @@ class WazeCard extends LitElement {
       title: 'Waze Routes',
       group: false,
       header: true,
-      columns: ['name', 'distance', 'duration'],
+      columns: ['name', 'distance', 'duration', 'route'],
       ...config
     };
 
