@@ -35,13 +35,13 @@ class WazeCard extends LitElement {
               <thead>${this.config.columns.map(column => html `<th>${(column || '').toLowerCase()}</th>`)}</thead>            
             ` : html ``}
             <tbody>
-                ${this.currentStates.map(state => html `
+                ${this.currentStates ? this.currentStates.map(state => html `
                   <tr onclick="window.open('https://www.waze.com/ul?navigate=yes&ll=${state.destination.lat}%2C${state.destination.long}&from=${state.origin.lat}%2C${state.origin.long}&at=now');">
                     ${this.config.columns.map(column => html `
                       <td>${state[column]}</td>
                     `)}
                   </tr>
-                `)}
+                `) : ''}
             </tbody>     
         </table>
     </ha-card>
