@@ -21,7 +21,7 @@ class WazeCard extends LitElement {
     return html`
     <style>
       .ha-card-waze { /* Zebra striping */ }
-      .ha-card-waze h3 { padding-left: 10px ; padding-right: 10px ; margin-bottom: 0 ; color: white ; }
+      .ha-card-waze h3, h3 { padding-left: 10px ; padding-right: 10px ; margin-bottom: 0 ; color: white ; }
       .ha-card-waze table { width: 100%; }
       .ha-card-waze tr:nth-of-type(odd) { /*background: #eee; */ }
       .ha-card-waze th { /*background: #3498db;*/ color: white; font-weight: bold; }
