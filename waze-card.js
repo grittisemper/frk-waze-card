@@ -1,7 +1,7 @@
-"use strict";
 //import {Polymer} from "@polymer/polymer/polymer-legacy";
-let LitElement = window.LitElement || Object.getPrototypeOf(customElements.get("hui-error-entity-row"));
-let html = LitElement.prototype.html;
+import { LitElement, html, } from 'https://unpkg-gcp.firebaseapp.com/@polymer/lit-element@0.5.2/lit-element.js?module';
+//let LitElement = window.LitElement || Object.getPrototypeOf(customElements.get("hui-error-entity-row"));
+// let html = LitElement.prototype.html;
 function loadCSS(url) {
     const link = document.createElement('link');
     link.type = 'text/css';
@@ -25,7 +25,7 @@ class WazeCard extends LitElement {
     </style>
     `;
     }
-    render() {
+    _render() {
         return html `
     <ha-card class="ha-card-waze">
         ${this.styles()}
